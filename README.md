@@ -5,8 +5,10 @@ A minimal launcher / home screen for Tanawin Bed & Breakfast. One static
 cards linking out to each Tanawin app:
 
 - **Finance** — live, links to https://tanawin-expenses.pages.dev/
-- **Kitchen** — coming soon (disabled card)
-- **Menu** — coming soon (disabled card)
+- **Kitchen** — live, links to https://tanawin-kitchen.tanawinbnb.workers.dev/
+- **Menu** — live, links to https://tanawin-menu.tanawinbnb.workers.dev/staff
+  (the staff side; guests reach the menu itself via the QR code at
+  https://tanawin-menu.tanawinbnb.workers.dev/)
 
 Each app keeps its own login; the hub is a starting point, not single sign-on.
 
