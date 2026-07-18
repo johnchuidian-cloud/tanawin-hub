@@ -9,6 +9,8 @@ cards linking out to each Tanawin app:
 - **Menu** — live, links to https://tanawin-menu.tanawinbnb.workers.dev/staff
   (the staff side; guests reach the menu itself via the QR code at
   https://tanawin-menu.tanawinbnb.workers.dev/)
+- **Payroll** — live, links to https://tanawin-payroll.tanawinbnb.workers.dev/
+  (PIN-gated; payslip renderer + archive)
 
 Each app keeps its own login; the hub is a starting point, not single sign-on.
 
