@@ -6,29 +6,44 @@
  * fails silent — a failed check is simply "no update", never an error shown
  * to a user.
  *
- * Mechanism note: the Hub has no build step, so rather than a version file
- * that someone has to remember to bump on every deploy, this compares the
- * ETag of the current page across polls. Self-maintaining: Cloudflare changes
- * the ETag whenever the deployed bytes change. Apps that DO have a build step
- * (Finance, Kitchen, Payroll) stamp a build id into /version.json instead.
+ * ⚠️ MECHANISM — learned the hard way, 2026-08-18:
+ * Cloudflare Workers static assets serve NO ETag and NO Last-Modified header
+ * (verified on the live Hub: the only cache-ish header is cf-cache-status).
+ * An ETag/HEAD-based check therefore never fires on this platform — it just
+ * sits silently inert, which is the worst kind of broken.
+ * So this fetches the document itself and compares a cheap hash of the bytes.
+ * Self-maintaining: nothing to bump on deploy, and no build step needed.
+ *
+ * Apps WITH a build step should prefer stamping a build id into a tiny
+ * /version.json instead — same contract, far less data per poll than
+ * re-fetching a whole document.
  *
  * Cache-busting is mandatory, not decorative: Cloudflare's edge cache returns
- * stale copies to repeated identical requests, which would make this feature
- * silently never fire.
+ * stale copies to repeated identical requests (cf-cache-status: HIT), which
+ * would make this check silently never fire.
  */
 (function () {
   var POLL_MS = 5 * 60 * 1000;
-  var loadedTag = null;      // the version this page was loaded as — never updated
-  var dismissedTag = null;   // the version the user dismissed, so we don't re-nag
+  var loadedHash = null;     // the build this page was loaded as — never updated
+  var dismissedHash = null;  // the build the user dismissed, so we don't re-nag
   var banner = null;
 
-  function currentTag(cb) {
+  function hash(str) {
+    // FNV-1a, 32-bit. Not cryptographic — we only need "did the bytes change".
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h.toString(36);
+  }
+
+  function currentBuild(cb) {
     // Unique param per request — a reused timestamp still gets served from cache.
     var bust = Date.now().toString(36) + Math.random().toString(36).slice(2);
-    fetch(location.pathname + '?x=' + bust, { method: 'HEAD', cache: 'no-store' })
-      .then(function (res) {
-        cb(res.headers.get('etag') || res.headers.get('last-modified'));
-      })
+    fetch(location.pathname + '?x=' + bust, { cache: 'no-store' })
+      .then(function (res) { return res.ok ? res.text() : null; })
+      .then(function (text) { if (text) cb(hash(text)); })
       .catch(function () { /* offline, 500, blocked — stay quiet */ });
   }
 
@@ -50,7 +65,7 @@
     document.head.appendChild(s);
   }
 
-  function show(tag) {
+  function show(build) {
     if (banner) return;
     ensureStyles();
     banner = document.createElement('div');
@@ -69,7 +84,7 @@
     close.setAttribute('aria-label', 'Dismiss');
     close.textContent = '×';
     close.onclick = function () {
-      dismissedTag = tag;             // silent until a NEWER build appears
+      dismissedHash = build;          // silent until a NEWER build appears
       banner.remove();
       banner = null;
     };
@@ -81,10 +96,9 @@
   }
 
   function check() {
-    currentTag(function (tag) {
-      if (!tag) return;                       // no ETag served — stay dormant
-      if (loadedTag === null) { loadedTag = tag; return; }  // baseline only
-      if (tag !== loadedTag && tag !== dismissedTag) show(tag);
+    currentBuild(function (build) {
+      if (loadedHash === null) { loadedHash = build; return; }   // baseline only
+      if (build !== loadedHash && build !== dismissedHash) show(build);
     });
   }
 
