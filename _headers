@@ -1,0 +1,24 @@
+# Security headers for the Tanawin Hub.
+#
+# The Hub loads nothing but itself: inline <style> in each page, update-check.js
+# from the same origin, and local JPG/PNG. No CDN, no Supabase, no fonts — so this
+# is the tightest CSP in the suite and a good reference for the other apps.
+#
+# 'unsafe-inline' for style-src is required twice over: each page carries an inline
+# <style> block, and update-check.js injects a <style> element for the banner.
+# Scripts are all same-origin files, so script-src needs no exception.
+#
+# Outbound links to the other apps are navigations, which CSP does not restrict —
+# the cards keep working.
+#
+# ⚠️ _headers is a Cloudflare PAGES feature. The Hub runs on Workers static assets,
+# where support is unconfirmed — this file is the suite's canary. Verify with:
+#   curl -sI "https://tanawin-hub.tanawinbnb.workers.dev/?x=$RANDOM" | grep -i policy
+# A file in the repo proves nothing; only the response header does.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
