@@ -1,0 +1,17 @@
+# Keep repository internals off the public site.
+#
+# The Hub deploys its repo root as static assets, so without this file Cloudflare
+# served the .git folder (found 2026-09-17: /.git/config, /.git/HEAD and /.git/index
+# all returned 200 — enough to rebuild the whole repo) plus README.md.
+#
+# Nothing below is loaded by the app. index.html, staff.html, update-check.js,
+# assets/ and _headers are deliberately NOT listed — ignoring any of them would
+# break the launcher or drop its security headers.
+.git/
+docs/
+scripts/
+tmp/
+*.md
+wrangler.jsonc
+.gitignore
+.assetsignore
